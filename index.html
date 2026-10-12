@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Service Desk - Sign In</title>
+  <title>OnsiteDesk - Sign In</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 text-gray-800 min-h-screen flex items-center justify-center p-4">
@@ -16,7 +16,7 @@
       <p id="formSubtitle" class="text-sm text-gray-500 mt-1">Enter your details to access the portal</p>
     </div>
 
-    <!-- Toggle Sign In / Sign Up Tabs -->
+    <!-- Toggle Sign In / Sign Up -->
     <div class="flex bg-gray-100 rounded-lg p-1 mb-6">
       <button type="button" onclick="toggleAuthMode('signin')" id="tabSignIn"
         class="w-1/2 py-2 text-sm font-semibold rounded-md bg-white text-gray-900 shadow-sm transition">
@@ -28,61 +28,55 @@
       </button>
     </div>
 
-    <!-- Alert Box for Errors/Success -->
+    <!-- Alert Box -->
     <div id="alertBox" class="hidden mb-4 p-3 rounded-lg text-xs font-medium"></div>
 
-    <!-- ================= SIGN IN FORM ================= -->
+    <!-- SIGN IN FORM -->
     <form id="signInForm" class="space-y-4">
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
         <input type="tel" id="loginPhone" required placeholder="60123456789"
           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
       </div>
-
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
         <input type="password" id="loginPassword" required placeholder="••••••••"
           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
       </div>
-
-      <button type="submit"
+      <button type="submit" id="signInBtn"
         class="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-semibold py-2.5 rounded-lg transition shadow-sm">
         Sign In
       </button>
     </form>
 
-    <!-- ================= SIGN UP FORM ================= -->
+    <!-- SIGN UP FORM -->
     <form id="signUpForm" class="hidden space-y-4">
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
         <input type="text" id="regName" required placeholder="Enter your name"
           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
       </div>
-
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
         <input type="tel" id="regPhone" required placeholder="60123456789"
           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
         <span class="text-[11px] text-gray-400">Used as your login ID & for WhatsApp updates</span>
       </div>
-
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Select Role</label>
         <select id="regRole"
           class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none">
           <option value="user">Regular User (Submit Requests)</option>
           <option value="staff">Onsite Staff (Handle Tasks)</option>
-          <option value="qm">Queue Manager (QM)</option>
+          <option value="qm">Queue Manager (QM / System Admin)</option>
         </select>
       </div>
-
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Create Password</label>
         <input type="password" id="regPassword" required placeholder="••••••••"
           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
       </div>
-
-      <button type="submit"
+      <button type="submit" id="signUpBtn"
         class="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-semibold py-2.5 rounded-lg transition shadow-sm">
         Create Account
       </button>
@@ -90,7 +84,27 @@
   </div>
 
   <script>
-    // Format phone number to start with 60
+    // Auto-detect region URL for project: onsitedesk-3833b-default-rtdb
+    const DB_URLS = [
+      "https://onsitedesk-3833b-default-rtdb.asia-southeast1.firebasedatabase.app",
+      "https://onsitedesk-3833b-default-rtdb.firebaseio.com"
+    ];
+    let activeDbUrl = localStorage.getItem("firebaseActiveUrl") || DB_URLS[0];
+
+    async function dbFetch(path, options = {}) {
+      for (const baseUrl of [activeDbUrl, ...DB_URLS]) {
+        try {
+          const res = await fetch(`${baseUrl}${path}`, options);
+          if (res.ok) {
+            activeDbUrl = baseUrl;
+            localStorage.setItem("firebaseActiveUrl", baseUrl);
+            return await res.json();
+          }
+        } catch (e) {}
+      }
+      throw new Error("Cannot connect to Firebase Realtime Database. Make sure Rules are set to Test Mode.");
+    }
+
     function formatPhone(phone) {
       let cleaned = phone.replace(/\D/g, '');
       if (cleaned.startsWith('0')) cleaned = '6' + cleaned;
@@ -99,21 +113,20 @@
 
     function showAlert(message, isError = true) {
       const box = document.getElementById("alertBox");
-      box.classList.remove("hidden", "bg-red-50", "text-red-700", "border-red-200", "bg-emerald-50", "text-emerald-800", "border-emerald-200");
-      box.classList.add("border", isError ? "bg-red-50" : "bg-emerald-50", isError ? "text-red-700" : "text-emerald-800", isError ? "border-red-200" : "border-emerald-200");
+      box.className = `mb-4 p-3 rounded-lg text-xs font-medium border ${
+        isError ? "bg-red-50 text-red-700 border-red-200" : "bg-emerald-50 text-emerald-800 border-emerald-200"
+      }`;
       box.innerText = message;
+      box.classList.remove("hidden");
     }
 
-    // Switch between Sign In and Sign Up
     function toggleAuthMode(mode) {
       const isSignIn = (mode === 'signin');
       document.getElementById("signInForm").classList.toggle("hidden", !isSignIn);
       document.getElementById("signUpForm").classList.toggle("hidden", isSignIn);
       document.getElementById("alertBox").classList.add("hidden");
-
       document.getElementById("formTitle").innerText = isSignIn ? "Sign in to your account" : "Create a new account";
       document.getElementById("formSubtitle").innerText = isSignIn ? "Enter your details to access the portal" : "Register your details and role";
-
       document.getElementById("tabSignIn").className = isSignIn
         ? "w-1/2 py-2 text-sm font-semibold rounded-md bg-white text-gray-900 shadow-sm transition"
         : "w-1/2 py-2 text-sm font-semibold rounded-md text-gray-500 hover:text-gray-900 transition";
@@ -122,59 +135,77 @@
         : "w-1/2 py-2 text-sm font-semibold rounded-md text-gray-500 hover:text-gray-900 transition";
     }
 
-    // Redirect user based on their role
     function redirectByRole(user) {
       if (user.role === "user") {
         window.location.href = "user.html";
       } else {
-        // Since Staff & QM pages are set aside for now, show message or redirect to user.html temporarily
-        alert(`Signed in as ${user.role.toUpperCase()} (${user.name}).\n(Staff/QM page will be added next! Redirecting to User Page for now.)`);
-        window.location.href = "user.html";
+        window.location.href = "qm.html";
       }
     }
 
     // Handle Sign Up
-    document.getElementById("signUpForm").addEventListener("submit", function(e) {
+    document.getElementById("signUpForm").addEventListener("submit", async function(e) {
       e.preventDefault();
+      const btn = document.getElementById("signUpBtn");
+      btn.innerText = "Creating account...";
+      btn.disabled = true;
+
       const name = document.getElementById("regName").value.trim();
       const phone = formatPhone(document.getElementById("regPhone").value.trim());
       const role = document.getElementById("regRole").value;
       const password = document.getElementById("regPassword").value;
 
-      const users = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
+      try {
+        const existingUser = await dbFetch(`/users/${phone}.json`);
+        if (existingUser) {
+          showAlert("This WhatsApp number is already registered. Please Sign In.", true);
+          btn.innerText = "Create Account";
+          btn.disabled = false;
+          return;
+        }
 
-      // Check if phone number is already registered
-      if (users.some(u => u.phone === phone)) {
-        showAlert("This WhatsApp number is already registered. Please Sign In.", true);
-        return;
+        const newUser = { name, phone, role, password };
+        await dbFetch(`/users/${phone}.json`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newUser)
+        });
+
+        localStorage.setItem("currentUser", JSON.stringify(newUser));
+        redirectByRole(newUser);
+      } catch (err) {
+        showAlert(err.message, true);
+        btn.innerText = "Create Account";
+        btn.disabled = false;
       }
-
-      const newUser = { name, phone, role, password };
-      users.push(newUser);
-      localStorage.setItem("registeredUsers", JSON.stringify(users));
-
-      // Auto Sign-In after registration
-      localStorage.setItem("currentUser", JSON.stringify(newUser));
-      redirectByRole(newUser);
     });
 
     // Handle Sign In
-    document.getElementById("signInForm").addEventListener("submit", function(e) {
+    document.getElementById("signInForm").addEventListener("submit", async function(e) {
       e.preventDefault();
+      const btn = document.getElementById("signInBtn");
+      btn.innerText = "Signing in...";
+      btn.disabled = true;
+
       const phone = formatPhone(document.getElementById("loginPhone").value.trim());
       const password = document.getElementById("loginPassword").value;
 
-      const users = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
-      const foundUser = users.find(u => u.phone === phone && u.password === password);
+      try {
+        const foundUser = await dbFetch(`/users/${phone}.json`);
+        if (!foundUser || foundUser.password !== password) {
+          showAlert("Invalid WhatsApp number or password.", true);
+          btn.innerText = "Sign In";
+          btn.disabled = false;
+          return;
+        }
 
-      if (!foundUser) {
-        showAlert("Invalid WhatsApp number or password. Please try again or Sign Up.", true);
-        return;
+        localStorage.setItem("currentUser", JSON.stringify(foundUser));
+        redirectByRole(foundUser);
+      } catch (err) {
+        showAlert(err.message, true);
+        btn.innerText = "Sign In";
+        btn.disabled = false;
       }
-
-      // Save active session & redirect
-      localStorage.setItem("currentUser", JSON.stringify(foundUser));
-      redirectByRole(foundUser);
     });
   </script>
 </body>
