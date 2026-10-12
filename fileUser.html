@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Service Desk - Submit a Request</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen py-6 px-4">
+
+  <div class="max-w-xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200">
+    
+    <!-- Top User Profile Bar & Sign Out -->
+    <div class="flex justify-between items-center pb-4 mb-5 border-b border-gray-100">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-9 h-9 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm" id="userInitial">
+          U
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-gray-900 leading-tight" id="displayUserName">Loading...</p>
+          <p class="text-xs text-gray-500" id="displayUserPhone">60123456789</p>
+        </div>
+      </div>
+      <button onclick="signOut()" class="text-xs font-medium text-red-600 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg transition">
+        Sign Out
+      </button>
+    </div>
+
+    <!-- Header -->
+    <p class="text-xs font-semibold tracking-wider text-emerald-700 uppercase">Service Desk</p>
+    <h1 class="text-2xl font-bold text-gray-900 mt-1">Submit a request</h1>
+    <p class="text-sm text-gray-500 mt-1 mb-6">
+      Fill this in, then send it to the queue manager from your own WhatsApp. Photos can be attached in the WhatsApp chat.
+    </p>
+
+    <form id="requestForm" class="space-y-4">
+
+      <!-- What do you need? -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">What do you need?</label>
+        <select id="requestType" onchange="updateFormEfficiency()"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none">
+          <option value="Onsite request">Onsite request</option>
+          <option value="Stock receive">Stock receive</option>
+          <option value="Stock out">Stock out</option>
+          <option value="Shop assistance">Shop assistance</option>
+          <option value="Event assistance">Event assistance</option>
+          <option value="Others">Others</option>
+        </select>
+      </div>
+
+      <!-- Issue Category (Only visible when "Onsite request" is selected) -->
+      <div id="techCategoryBox" class="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+        <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Issue Category:</label>
+        <div class="grid grid-cols-3 gap-2 text-xs sm:text-sm">
+          <label class="flex items-center justify-center p-2 border rounded-md bg-white cursor-pointer hover:border-emerald-600">
+            <input type="radio" name="techType" value="Hardware" checked class="mr-1.5 accent-emerald-700"> 💻 Hardware
+          </label>
+          <label class="flex items-center justify-center p-2 border rounded-md bg-white cursor-pointer hover:border-emerald-600">
+            <input type="radio" name="techType" value="Software" class="mr-1.5 accent-emerald-700"> ⚙️ Software
+          </label>
+          <label class="flex items-center justify-center p-2 border rounded-md bg-white cursor-pointer hover:border-emerald-600">
+            <input type="radio" name="techType" value="Network/Other" class="mr-1.5 accent-emerald-700"> 📶 Network/Other
+          </label>
+        </div>
+      </div>
+
+      <!-- How urgent is it? (1-Tap Buttons) -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">How urgent is it?</label>
+        <div class="grid grid-cols-4 gap-2 text-xs sm:text-sm">
+          <button type="button" onclick="setUrgency('Low')" id="urg-Low" class="urg-btn py-2 border rounded-lg text-gray-600 bg-white">Low</button>
+          <button type="button" onclick="setUrgency('Normal')" id="urg-Normal" class="urg-btn py-2 border-2 border-emerald-700 bg-emerald-50 text-emerald-900 font-semibold rounded-lg">Normal</button>
+          <button type="button" onclick="setUrgency('High')" id="urg-High" class="urg-btn py-2 border rounded-lg text-gray-600 bg-white">High</button>
+          <button type="button" onclick="setUrgency('Urgent')" id="urg-Urgent" class="urg-btn py-2 border rounded-lg text-gray-600 bg-white">Urgent</button>
+        </div>
+        <input type="hidden" id="urgencyLevel" value="Normal">
+        <p class="text-xs text-gray-400 mt-1">The queue manager may adjust this after reviewing your request.</p>
+      </div>
+
+      <!-- Details + 1-Click Quick Templates -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Details</label>
+        
+        <!-- Quick Tap Chips -->
+        <div id="quickChips" class="flex flex-wrap gap-1.5 mb-2"></div>
+
+        <textarea id="requestDetails" rows="3" required placeholder="Describe the request and location."
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none"></textarea>
+      </div>
+
+      <!-- Submit Button -->
+      <button type="submit"
+        class="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-semibold py-3 rounded-lg transition shadow-sm">
+        Submit request
+      </button>
+    </form>
+
+    <!-- My Recent Requests History (So user can see what they submitted) -->
+    <div class="mt-8 pt-5 border-t border-gray-100">
+      <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">My Recent Requests</h3>
+      <div id="myHistoryList" class="space-y-2"></div>
+    </div>
+
+  </div>
+
+  <script>
+    // REPLACE WITH YOUR QUEUE MANAGER WHATSAPP NUMBER
+    const TARGET_WHATSAPP = "60123456789";
+
+    let currentUser = null;
+
+    const quickTemplates = {
+      "Onsite request": ["PC won't turn on", "Software/System lag", "Printer error/jam", "WiFi/Network down", "New hardware setup"],
+      "Stock receive": ["New stock arrived, need verification", "Need help moving stock to storage"],
+      "Stock out": ["Release stock for customer", "Transfer stock to front area"],
+      "Shop assistance": ["Customer needs technical assistance", "Need backup at counter"],
+      "Event assistance": ["Event equipment setup", "On-site technical support for event"],
+      "Others": ["Immediate assistance needed"]
+    };
+
+    // 1. Check Session on Load (Kick back to index.html if not signed in)
+    window.onload = () => {
+      const savedSession = localStorage.getItem("currentUser");
+      if (!savedSession) {
+        window.location.href = "index.html";
+        return;
+      }
+
+      currentUser = JSON.parse(savedSession);
+      document.getElementById("displayUserName").innerText = currentUser.name;
+      document.getElementById("displayUserPhone").innerText = "+" + currentUser.phone;
+      document.getElementById("userInitial").innerText = currentUser.name.charAt(0).toUpperCase();
+
+      updateFormEfficiency();
+      renderMyHistory();
+    };
+
+    // 2. 1-Click Urgency Selector
+    function setUrgency(level) {
+      document.getElementById("urgencyLevel").value = level;
+      document.querySelectorAll(".urg-btn").forEach(btn => {
+        btn.className = "urg-btn py-2 border rounded-lg text-gray-600 bg-white";
+      });
+      const activeBtn = document.getElementById("urg-" + level);
+      if (level === "Urgent") {
+        activeBtn.className = "urg-btn py-2 border-2 border-red-600 bg-red-50 text-red-700 font-semibold rounded-lg";
+      } else if (level === "High") {
+        activeBtn.className = "urg-btn py-2 border-2 border-orange-500 bg-orange-50 text-orange-700 font-semibold rounded-lg";
+      } else {
+        activeBtn.className = "urg-btn py-2 border-2 border-emerald-700 bg-emerald-50 text-emerald-900 font-semibold rounded-lg";
+      }
+    }
+
+    // 3. Dynamic Quick Chips & Hardware/Software Toggle
+    function updateFormEfficiency() {
+      const type = document.getElementById("requestType").value;
+      document.getElementById("techCategoryBox").style.display = (type === "Onsite request") ? "block" : "none";
+
+      const chipsContainer = document.getElementById("quickChips");
+      chipsContainer.innerHTML = "";
+      (quickTemplates[type] || []).forEach(text => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "text-xs bg-gray-100 hover:bg-emerald-100 text-gray-700 px-2.5 py-1 rounded-full border transition";
+        btn.innerText = "+ " + text;
+        btn.onclick = () => {
+          const box = document.getElementById("requestDetails");
+          box.value = box.value ? box.value + " | " + text : text + " @ Location: ";
+          box.focus();
+        };
+        chipsContainer.appendChild(btn);
+      });
+    }
+
+    // 4. Submit Request
+    document.getElementById("requestForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+
+      const reqType = document.getElementById("requestType").value;
+      const techType = (reqType === "Onsite request") 
+        ? " (" + document.querySelector('input[name="techType"]:checked').value + ")" 
+        : "";
+      const urgency = document.getElementById("urgencyLevel").value;
+      const details = document.getElementById("requestDetails").value.trim();
+
+      const ticketId = "REQ-" + Math.floor(100 + Math.random() * 900);
+      const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      const newTicket = {
+        id: ticketId,
+        name: currentUser.name,
+        phone: currentUser.phone,
+        type: reqType + techType,
+        urgency,
+        details,
+        status: "Pending",
+        createdAt: timeNow
+      };
+
+      // Save ticket to storage
+      const tickets = JSON.parse(localStorage.getItem("serviceTickets") || "[]");
+      tickets.unshift(newTicket);
+      localStorage.setItem("serviceTickets", JSON.stringify(tickets));
+
+      // Format WhatsApp Message
+      const waText = 
+`*NEW SERVICE REQUEST [${ticketId}]*
+👤 *From:* ${currentUser.name} (wa.me/${currentUser.phone})
+📂 *Category:* ${reqType}${techType}
+⚡ *Urgency:* ${urgency}
+📝 *Details & Location:* ${details}
+⏱️ *Submitted at:* ${timeNow}`;
+
+      document.getElementById("requestDetails").value = "";
+      renderMyHistory();
+
+      // Open WhatsApp
+      window.open(`https://wa.me/${TARGET_WHATSAPP}?text=${encodeURIComponent(waText)}`, "_blank");
+    });
+
+    // 5. Show User's Own Submitted Requests at the Bottom
+    function renderMyHistory() {
+      const tickets = JSON.parse(localStorage.getItem("serviceTickets") || "[]");
+      const myTickets = tickets.filter(t => t.phone === currentUser.phone).slice(0, 3);
+      const container = document.getElementById("myHistoryList");
+
+      if (myTickets.length === 0) {
+        container.innerHTML = `<p class="text-xs text-gray-400">No requests submitted yet.</p>`;
+        return;
+      }
+
+      container.innerHTML = myTickets.map(t => `
+        <div class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center text-xs">
+          <div>
+            <span class="font-bold text-gray-800">${t.id}</span> • <span class="font-medium text-emerald-800">${t.type}</span>
+            <p class="text-gray-500 truncate max-w-xs">${t.details}</p>
+          </div>
+          <span class="px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-800">${t.status}</span>
+        </div>
+      `).join("");
+    }
+
+    // 6. Sign Out
+    function signOut() {
+      localStorage.removeItem("currentUser");
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>
