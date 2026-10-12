@@ -13,7 +13,7 @@
     <div class="text-center mb-6">
       <p class="text-xs font-semibold tracking-wider text-emerald-700 uppercase">Service Desk Portal</p>
       <h1 id="formTitle" class="text-2xl font-bold text-gray-900 mt-1">Sign in to your account</h1>
-      <p id="formSubtitle" class="text-sm text-gray-500 mt-1">Enter your details to submit a request</p>
+      <p id="formSubtitle" class="text-sm text-gray-500 mt-1">Enter your details to submit a service request</p>
     </div>
 
     <!-- Toggle Sign In / Sign Up -->
@@ -49,15 +49,15 @@
       </button>
     </form>
 
-    <!-- ================= SIGN UP FORM (No Role Selection) ================= -->
+    <!-- ================= SIGN UP FORM ================= -->
     <form id="signUpForm" class="hidden space-y-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-        <input type="text" id="regName" required placeholder="Enter your name"
+        <label class="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
+        <input type="text" id="regName" required placeholder="Enter your full name"
           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Your WhatsApp Number</label>
         <input type="tel" id="regPhone" required placeholder="60123456789"
           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
         <span class="text-[11px] text-gray-400">Used as your login ID & for WhatsApp updates</span>
@@ -82,6 +82,13 @@
     ];
     let activeDbUrl = localStorage.getItem("firebaseActiveUrl") || DB_URLS[0];
 
+    // If already signed in, go straight to user.html
+    window.onload = () => {
+      if (localStorage.getItem("staffSession")) {
+        window.location.href = "user.html";
+      }
+    };
+
     async function dbFetch(path, options = {}) {
       for (const baseUrl of [activeDbUrl, ...DB_URLS]) {
         try {
@@ -93,12 +100,13 @@
           }
         } catch (e) {}
       }
-      throw new Error("Cannot connect to Firebase. Make sure Realtime Database Rules are in Test Mode.");
+      throw new Error("Cannot connect to Firebase. Ensure Realtime Database Rules are set to Test Mode.");
     }
 
     function formatPhone(phone) {
       let cleaned = phone.replace(/\D/g, '');
       if (cleaned.startsWith('0')) cleaned = '6' + cleaned;
+      else if (!cleaned.startsWith('60')) cleaned = '60' + cleaned;
       return cleaned;
     }
 
@@ -118,7 +126,7 @@
       document.getElementById("alertBox").classList.add("hidden");
 
       document.getElementById("formTitle").innerText = isSignIn ? "Sign in to your account" : "Create a staff account";
-      document.getElementById("formSubtitle").innerText = isSignIn ? "Enter your details to submit a request" : "Register your name and WhatsApp number";
+      document.getElementById("formSubtitle").innerText = isSignIn ? "Enter your details to submit a service request" : "Register your name and WhatsApp number";
 
       document.getElementById("tabSignIn").className = isSignIn
         ? "w-1/2 py-2 text-sm font-semibold rounded-md bg-white text-gray-900 shadow-sm transition"
@@ -128,7 +136,7 @@
         : "w-1/2 py-2 text-sm font-semibold rounded-md text-gray-500 hover:text-gray-900 transition";
     }
 
-    // Handle Sign Up (Always registers as regular staff user -> redirects to user.html)
+    // Handle Sign Up
     document.getElementById("signUpForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       const btn = document.getElementById("signUpBtn");
@@ -140,7 +148,7 @@
       const password = document.getElementById("regPassword").value;
 
       try {
-        const existingUser = await dbFetch(`/users/${phone}.json`);
+        const existingUser = await dbFetch(`/staffUsers/${phone}.json`);
         if (existingUser) {
           showAlert("This WhatsApp number is already registered. Please Sign In.", true);
           btn.innerText = "Create Account";
@@ -148,14 +156,14 @@
           return;
         }
 
-        const newUser = { name, phone, role: "user", password };
-        await dbFetch(`/users/${phone}.json`, {
+        const newUser = { name, phone, password, createdAt: new Date().toISOString() };
+        await dbFetch(`/staffUsers/${phone}.json`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(newUser)
         });
 
-        localStorage.setItem("currentUser", JSON.stringify(newUser));
+        localStorage.setItem("staffSession", JSON.stringify(newUser));
         window.location.href = "user.html";
       } catch (err) {
         showAlert(err.message, true);
@@ -164,7 +172,7 @@
       }
     });
 
-    // Handle Sign In (Directly redirects to user.html)
+    // Handle Sign In
     document.getElementById("signInForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       const btn = document.getElementById("signInBtn");
@@ -175,7 +183,7 @@
       const password = document.getElementById("loginPassword").value;
 
       try {
-        const foundUser = await dbFetch(`/users/${phone}.json`);
+        const foundUser = await dbFetch(`/staffUsers/${phone}.json`);
         if (!foundUser || foundUser.password !== password) {
           showAlert("Invalid WhatsApp number or password.", true);
           btn.innerText = "Sign In";
@@ -183,7 +191,7 @@
           return;
         }
 
-        localStorage.setItem("currentUser", JSON.stringify(foundUser));
+        localStorage.setItem("staffSession", JSON.stringify(foundUser));
         window.location.href = "user.html";
       } catch (err) {
         showAlert(err.message, true);
