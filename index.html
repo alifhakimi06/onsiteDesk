@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OnsiteDesk - Sign In</title>
+  <title>OnsiteDesk - Staff Sign In</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 text-gray-800 min-h-screen flex items-center justify-center p-4">
@@ -13,7 +13,7 @@
     <div class="text-center mb-6">
       <p class="text-xs font-semibold tracking-wider text-emerald-700 uppercase">Service Desk Portal</p>
       <h1 id="formTitle" class="text-2xl font-bold text-gray-900 mt-1">Sign in to your account</h1>
-      <p id="formSubtitle" class="text-sm text-gray-500 mt-1">Enter your details to access the portal</p>
+      <p id="formSubtitle" class="text-sm text-gray-500 mt-1">Enter your details to submit a request</p>
     </div>
 
     <!-- Toggle Sign In / Sign Up -->
@@ -31,7 +31,7 @@
     <!-- Alert Box -->
     <div id="alertBox" class="hidden mb-4 p-3 rounded-lg text-xs font-medium"></div>
 
-    <!-- SIGN IN FORM -->
+    <!-- ================= SIGN IN FORM ================= -->
     <form id="signInForm" class="space-y-4">
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
@@ -49,7 +49,7 @@
       </button>
     </form>
 
-    <!-- SIGN UP FORM -->
+    <!-- ================= SIGN UP FORM (No Role Selection) ================= -->
     <form id="signUpForm" class="hidden space-y-4">
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
@@ -61,15 +61,6 @@
         <input type="tel" id="regPhone" required placeholder="60123456789"
           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
         <span class="text-[11px] text-gray-400">Used as your login ID & for WhatsApp updates</span>
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Select Role</label>
-        <select id="regRole"
-          class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none">
-          <option value="user">Regular User (Submit Requests)</option>
-          <option value="staff">Onsite Staff (Handle Tasks)</option>
-          <option value="qm">Queue Manager (QM / System Admin)</option>
-        </select>
       </div>
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Create Password</label>
@@ -84,7 +75,7 @@
   </div>
 
   <script>
-    // Auto-detect region URL for project: onsitedesk-3833b-default-rtdb
+    // Auto-detect Firebase URL for project: onsitedesk-3833b-default-rtdb
     const DB_URLS = [
       "https://onsitedesk-3833b-default-rtdb.asia-southeast1.firebasedatabase.app",
       "https://onsitedesk-3833b-default-rtdb.firebaseio.com"
@@ -102,7 +93,7 @@
           }
         } catch (e) {}
       }
-      throw new Error("Cannot connect to Firebase Realtime Database. Make sure Rules are set to Test Mode.");
+      throw new Error("Cannot connect to Firebase. Make sure Realtime Database Rules are in Test Mode.");
     }
 
     function formatPhone(phone) {
@@ -125,8 +116,10 @@
       document.getElementById("signInForm").classList.toggle("hidden", !isSignIn);
       document.getElementById("signUpForm").classList.toggle("hidden", isSignIn);
       document.getElementById("alertBox").classList.add("hidden");
-      document.getElementById("formTitle").innerText = isSignIn ? "Sign in to your account" : "Create a new account";
-      document.getElementById("formSubtitle").innerText = isSignIn ? "Enter your details to access the portal" : "Register your details and role";
+
+      document.getElementById("formTitle").innerText = isSignIn ? "Sign in to your account" : "Create a staff account";
+      document.getElementById("formSubtitle").innerText = isSignIn ? "Enter your details to submit a request" : "Register your name and WhatsApp number";
+
       document.getElementById("tabSignIn").className = isSignIn
         ? "w-1/2 py-2 text-sm font-semibold rounded-md bg-white text-gray-900 shadow-sm transition"
         : "w-1/2 py-2 text-sm font-semibold rounded-md text-gray-500 hover:text-gray-900 transition";
@@ -135,15 +128,7 @@
         : "w-1/2 py-2 text-sm font-semibold rounded-md text-gray-500 hover:text-gray-900 transition";
     }
 
-    function redirectByRole(user) {
-      if (user.role === "user") {
-        window.location.href = "user.html";
-      } else {
-        window.location.href = "qm.html";
-      }
-    }
-
-    // Handle Sign Up
+    // Handle Sign Up (Always registers as regular staff user -> redirects to user.html)
     document.getElementById("signUpForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       const btn = document.getElementById("signUpBtn");
@@ -152,7 +137,6 @@
 
       const name = document.getElementById("regName").value.trim();
       const phone = formatPhone(document.getElementById("regPhone").value.trim());
-      const role = document.getElementById("regRole").value;
       const password = document.getElementById("regPassword").value;
 
       try {
@@ -164,7 +148,7 @@
           return;
         }
 
-        const newUser = { name, phone, role, password };
+        const newUser = { name, phone, role: "user", password };
         await dbFetch(`/users/${phone}.json`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -172,7 +156,7 @@
         });
 
         localStorage.setItem("currentUser", JSON.stringify(newUser));
-        redirectByRole(newUser);
+        window.location.href = "user.html";
       } catch (err) {
         showAlert(err.message, true);
         btn.innerText = "Create Account";
@@ -180,7 +164,7 @@
       }
     });
 
-    // Handle Sign In
+    // Handle Sign In (Directly redirects to user.html)
     document.getElementById("signInForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       const btn = document.getElementById("signInBtn");
@@ -200,7 +184,7 @@
         }
 
         localStorage.setItem("currentUser", JSON.stringify(foundUser));
-        redirectByRole(foundUser);
+        window.location.href = "user.html";
       } catch (err) {
         showAlert(err.message, true);
         btn.innerText = "Sign In";
