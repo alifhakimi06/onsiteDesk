@@ -3,350 +3,179 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Service Desk</title>
+  <title>Service Desk - Sign In</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 text-gray-800 min-h-screen py-6 px-4">
+<body class="bg-gray-100 text-gray-800 min-h-screen flex items-center justify-center p-4">
 
-  <!-- Quick Top Navigation: Switch between User Form & Staff/QM Queue -->
-  <div class="max-w-xl mx-auto mb-4 flex bg-white rounded-lg p-1 shadow-sm border border-gray-200">
-    <button onclick="switchTab('user')" id="tabUserBtn" class="w-1/2 py-2 text-sm font-semibold rounded-md bg-emerald-800 text-white transition">
-      📝 Submit a request
-    </button>
-    <button onclick="switchTab('queue')" id="tabQueueBtn" class="w-1/2 py-2 text-sm font-semibold rounded-md text-gray-600 hover:bg-gray-50 transition">
-      📊 Live Queue (Staff & QM) <span id="queueCount" class="ml-1 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
-    </button>
-  </div>
+  <div class="max-w-md w-full bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200">
+    <!-- Header -->
+    <div class="text-center mb-6">
+      <p class="text-xs font-semibold tracking-wider text-emerald-700 uppercase">Service Desk Portal</p>
+      <h1 id="formTitle" class="text-2xl font-bold text-gray-900 mt-1">Sign in to your account</h1>
+      <p id="formSubtitle" class="text-sm text-gray-500 mt-1">Enter your details to access the portal</p>
+    </div>
 
-  <!-- ================= SECTION 1: USER PAGE ================= -->
-  <div id="userSection" class="max-w-xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200">
-    <div class="flex justify-between items-start">
-      <div>
-        <p class="text-xs font-semibold tracking-wider text-emerald-700 uppercase">Service Desk</p>
-        <h1 class="text-2xl font-bold text-gray-900 mt-1">Submit a request</h1>
-      </div>
-      <button type="button" onclick="clearSavedUser()" class="text-xs text-gray-400 hover:text-red-500 underline">
-        Switch user
+    <!-- Toggle Sign In / Sign Up Tabs -->
+    <div class="flex bg-gray-100 rounded-lg p-1 mb-6">
+      <button type="button" onclick="toggleAuthMode('signin')" id="tabSignIn"
+        class="w-1/2 py-2 text-sm font-semibold rounded-md bg-white text-gray-900 shadow-sm transition">
+        Sign In
+      </button>
+      <button type="button" onclick="toggleAuthMode('signup')" id="tabSignUp"
+        class="w-1/2 py-2 text-sm font-semibold rounded-md text-gray-500 hover:text-gray-900 transition">
+        Sign Up
       </button>
     </div>
-    <p class="text-sm text-gray-500 mt-1 mb-6">
-      Fill this in, then send it to the queue manager from your own WhatsApp. Photos can be attached in the WhatsApp chat.
-    </p>
 
-    <form id="requestForm" class="space-y-4">
-      
-      <!-- Name & WhatsApp Number (Auto-Saved in browser for repeat efficiency) -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Your name</label>
-          <input type="text" id="userName" required placeholder="Enter your name"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Your WhatsApp number</label>
-          <input type="tel" id="userPhone" required placeholder="60123456789"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
-        </div>
-      </div>
+    <!-- Alert Box for Errors/Success -->
+    <div id="alertBox" class="hidden mb-4 p-3 rounded-lg text-xs font-medium"></div>
 
-      <!-- What do you need? -->
+    <!-- ================= SIGN IN FORM ================= -->
+    <form id="signInForm" class="space-y-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">What do you need?</label>
-        <select id="requestType" onchange="updateFormEfficiency()"
-          class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none">
-          <option value="Onsite request">Onsite request</option>
-          <option value="Stock receive">Stock receive</option>
-          <option value="Stock out">Stock out</option>
-          <option value="Shop assistance">Shop assistance</option>
-          <option value="Event assistance">Event assistance</option>
-          <option value="Others">Others</option>
-        </select>
+        <label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
+        <input type="tel" id="loginPhone" required placeholder="60123456789"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
       </div>
 
-      <!-- Quick Issue Type (Only visible when "Onsite request" is selected) -->
-      <div id="techCategoryBox" class="p-3 bg-gray-50 border border-gray-200 rounded-lg">
-        <label class="block text-xs font-semibold text-gray-600 uppercase mb-2">Issue Category:</label>
-        <div class="grid grid-cols-3 gap-2 text-xs sm:text-sm">
-          <label class="flex items-center justify-center p-2 border rounded-md bg-white cursor-pointer hover:border-emerald-600">
-            <input type="radio" name="techType" value="Hardware" checked class="mr-1.5 accent-emerald-700"> 💻 Hardware
-          </label>
-          <label class="flex items-center justify-center p-2 border rounded-md bg-white cursor-pointer hover:border-emerald-600">
-            <input type="radio" name="techType" value="Software" class="mr-1.5 accent-emerald-700"> ⚙️ Software
-          </label>
-          <label class="flex items-center justify-center p-2 border rounded-md bg-white cursor-pointer hover:border-emerald-600">
-            <input type="radio" name="techType" value="Network/Other" class="mr-1.5 accent-emerald-700"> 📶 Network/Other
-          </label>
-        </div>
-      </div>
-
-      <!-- How urgent is it? (1-Tap Buttons for faster selection) -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">How urgent is it?</label>
-        <div class="grid grid-cols-4 gap-2 text-xs sm:text-sm" id="urgencyButtons">
-          <button type="button" onclick="setUrgency('Low')" id="urg-Low" class="urg-btn py-2 border rounded-lg text-gray-600 bg-white">Low</button>
-          <button type="button" onclick="setUrgency('Normal')" id="urg-Normal" class="urg-btn py-2 border-2 border-emerald-700 bg-emerald-50 text-emerald-900 font-semibold rounded-lg">Normal</button>
-          <button type="button" onclick="setUrgency('High')" id="urg-High" class="urg-btn py-2 border rounded-lg text-gray-600 bg-white">High</button>
-          <button type="button" onclick="setUrgency('Urgent')" id="urg-Urgent" class="urg-btn py-2 border rounded-lg text-gray-600 bg-white">Urgent</button>
-        </div>
-        <input type="hidden" id="urgencyLevel" value="Normal">
-        <p class="text-xs text-gray-400 mt-1">The queue manager may adjust this after reviewing your request.</p>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+        <input type="password" id="loginPassword" required placeholder="••••••••"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
       </div>
 
-      <!-- Details + 1-Click Quick Templates -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Details</label>
-        
-        <!-- Quick Tap Chips (Dynamically changes based on request type) -->
-        <div id="quickChips" class="flex flex-wrap gap-1.5 mb-2"></div>
-
-        <textarea id="requestDetails" rows="3" required placeholder="Describe the request and location."
-          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none"></textarea>
-      </div>
-
-      <!-- Submit Button -->
       <button type="submit"
-        class="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-semibold py-3 rounded-lg transition shadow-sm">
-        Submit request
+        class="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-semibold py-2.5 rounded-lg transition shadow-sm">
+        Sign In
       </button>
     </form>
 
-    <div class="text-center mt-5">
-      <button type="button" onclick="switchTab('queue')" class="text-xs text-gray-500 hover:underline">
-        Staff member? Sign in to the queue
-      </button>
-    </div>
-  </div>
-
-  <!-- ================= SECTION 2: STAFF & QM QUEUE PAGE ================= -->
-  <div id="queueSection" class="hidden max-w-2xl mx-auto bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-    <div class="flex justify-between items-center mb-4">
+    <!-- ================= SIGN UP FORM ================= -->
+    <form id="signUpForm" class="hidden space-y-4">
       <div>
-        <h2 class="text-xl font-bold text-gray-900">Service Queue & QM Tracker</h2>
-        <p class="text-xs text-gray-500">Staff can claim and update job status here. QM can monitor progress in real time.</p>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+        <input type="text" id="regName" required placeholder="Enter your name"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
       </div>
-      <!-- Status Filter for QM -->
-      <select id="statusFilter" onchange="renderQueue()" class="text-xs border rounded-lg px-2.5 py-1.5 bg-gray-50">
-        <option value="ALL">All Statuses</option>
-        <option value="Pending">🔴 Pending</option>
-        <option value="In Progress">🟡 In Progress</option>
-        <option value="Completed">🟢 Completed</option>
-      </select>
-    </div>
 
-    <div id="ticketList" class="space-y-3"></div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
+        <input type="tel" id="regPhone" required placeholder="60123456789"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
+        <span class="text-[11px] text-gray-400">Used as your login ID & for WhatsApp updates</span>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Select Role</label>
+        <select id="regRole"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-emerald-600 focus:outline-none">
+          <option value="user">Regular User (Submit Requests)</option>
+          <option value="staff">Onsite Staff (Handle Tasks)</option>
+          <option value="qm">Queue Manager (QM)</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Create Password</label>
+        <input type="password" id="regPassword" required placeholder="••••••••"
+          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none">
+      </div>
+
+      <button type="submit"
+        class="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-semibold py-2.5 rounded-lg transition shadow-sm">
+        Create Account
+      </button>
+    </form>
   </div>
 
   <script>
-    // REPLACE WITH YOUR QUEUE MANAGER OR ADMIN WHATSAPP NUMBER
-    const TARGET_WHATSAPP = "60123456789";
+    // Format phone number to start with 60
+    function formatPhone(phone) {
+      let cleaned = phone.replace(/\D/g, '');
+      if (cleaned.startsWith('0')) cleaned = '6' + cleaned;
+      return cleaned;
+    }
 
-    // Dynamic quick-tap templates based on selected category
-    const quickTemplates = {
-      "Onsite request": ["PC won't turn on", "Software/System lag", "Printer error/jam", "WiFi/Network down", "New hardware setup"],
-      "Stock receive": ["New stock arrived, need verification", "Need help moving stock to storage"],
-      "Stock out": ["Release stock for customer", "Transfer stock to front area"],
-      "Shop assistance": ["Customer needs technical assistance", "Need backup at counter"],
-      "Event assistance": ["Event equipment setup", "On-site technical support for event"],
-      "Others": ["Immediate assistance needed"]
-    };
+    function showAlert(message, isError = true) {
+      const box = document.getElementById("alertBox");
+      box.classList.remove("hidden", "bg-red-50", "text-red-700", "border-red-200", "bg-emerald-50", "text-emerald-800", "border-emerald-200");
+      box.classList.add("border", isError ? "bg-red-50" : "bg-emerald-50", isError ? "text-red-700" : "text-emerald-800", isError ? "border-red-200" : "border-emerald-200");
+      box.innerText = message;
+    }
 
-    // 1. On Page Load: Auto-fill saved staff name & WhatsApp number
-    window.onload = () => {
-      if (localStorage.getItem("staffName")) document.getElementById("userName").value = localStorage.getItem("staffName");
-      if (localStorage.getItem("staffPhone")) document.getElementById("userPhone").value = localStorage.getItem("staffPhone");
-      updateFormEfficiency();
-      renderQueue();
-    };
+    // Switch between Sign In and Sign Up
+    function toggleAuthMode(mode) {
+      const isSignIn = (mode === 'signin');
+      document.getElementById("signInForm").classList.toggle("hidden", !isSignIn);
+      document.getElementById("signUpForm").classList.toggle("hidden", isSignIn);
+      document.getElementById("alertBox").classList.add("hidden");
 
-    // 2. 1-Click Urgency Selector
-    function setUrgency(level) {
-      document.getElementById("urgencyLevel").value = level;
-      document.querySelectorAll(".urg-btn").forEach(btn => {
-        btn.className = "urg-btn py-2 border rounded-lg text-gray-600 bg-white";
-      });
-      const activeBtn = document.getElementById("urg-" + level);
-      if (level === "Urgent") {
-        activeBtn.className = "urg-btn py-2 border-2 border-red-600 bg-red-50 text-red-700 font-semibold rounded-lg";
-      } else if (level === "High") {
-        activeBtn.className = "urg-btn py-2 border-2 border-orange-500 bg-orange-50 text-orange-700 font-semibold rounded-lg";
+      document.getElementById("formTitle").innerText = isSignIn ? "Sign in to your account" : "Create a new account";
+      document.getElementById("formSubtitle").innerText = isSignIn ? "Enter your details to access the portal" : "Register your details and role";
+
+      document.getElementById("tabSignIn").className = isSignIn
+        ? "w-1/2 py-2 text-sm font-semibold rounded-md bg-white text-gray-900 shadow-sm transition"
+        : "w-1/2 py-2 text-sm font-semibold rounded-md text-gray-500 hover:text-gray-900 transition";
+      document.getElementById("tabSignUp").className = !isSignIn
+        ? "w-1/2 py-2 text-sm font-semibold rounded-md bg-white text-gray-900 shadow-sm transition"
+        : "w-1/2 py-2 text-sm font-semibold rounded-md text-gray-500 hover:text-gray-900 transition";
+    }
+
+    // Redirect user based on their role
+    function redirectByRole(user) {
+      if (user.role === "user") {
+        window.location.href = "user.html";
       } else {
-        activeBtn.className = "urg-btn py-2 border-2 border-emerald-700 bg-emerald-50 text-emerald-900 font-semibold rounded-lg";
+        // Since Staff & QM pages are set aside for now, show message or redirect to user.html temporarily
+        alert(`Signed in as ${user.role.toUpperCase()} (${user.name}).\n(Staff/QM page will be added next! Redirecting to User Page for now.)`);
+        window.location.href = "user.html";
       }
     }
 
-    // 3. Update Quick Chips & Sub-category when "What do you need?" changes
-    function updateFormEfficiency() {
-      const type = document.getElementById("requestType").value;
-      document.getElementById("techCategoryBox").style.display = (type === "Onsite request") ? "block" : "none";
-
-      const chipsContainer = document.getElementById("quickChips");
-      chipsContainer.innerHTML = "";
-      (quickTemplates[type] || []).forEach(text => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "text-xs bg-gray-100 hover:bg-emerald-100 text-gray-700 px-2.5 py-1 rounded-full border transition";
-        btn.innerText = "+ " + text;
-        btn.onclick = () => {
-          const box = document.getElementById("requestDetails");
-          box.value = box.value ? box.value + " | " + text : text + " @ Location: ";
-          box.focus();
-        };
-        chipsContainer.appendChild(btn);
-      });
-    }
-
-    // 4. Handle Form Submission
-    document.getElementById("requestForm").addEventListener("submit", function(e) {
+    // Handle Sign Up
+    document.getElementById("signUpForm").addEventListener("submit", function(e) {
       e.preventDefault();
+      const name = document.getElementById("regName").value.trim();
+      const phone = formatPhone(document.getElementById("regPhone").value.trim());
+      const role = document.getElementById("regRole").value;
+      const password = document.getElementById("regPassword").value;
 
-      const name = document.getElementById("userName").value.trim();
-      let phone = document.getElementById("userPhone").value.replace(/\D/g, '');
-      if (phone.startsWith('0')) phone = '6' + phone;
+      const users = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
 
-      const reqType = document.getElementById("requestType").value;
-      const techType = (reqType === "Onsite request") 
-        ? " (" + document.querySelector('input[name="techType"]:checked').value + ")" 
-        : "";
-      const urgency = document.getElementById("urgencyLevel").value;
-      const details = document.getElementById("requestDetails").value.trim();
-
-      // Save user info for next time
-      localStorage.setItem("staffName", name);
-      localStorage.setItem("staffPhone", phone);
-
-      // Generate Ticket ID & Timestamp
-      const ticketId = "REQ-" + Math.floor(100 + Math.random() * 900);
-      const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      const newTicket = {
-        id: ticketId,
-        name,
-        phone,
-        type: reqType + techType,
-        urgency,
-        details,
-        status: "Pending",
-        handler: "Unassigned",
-        createdAt: timeNow,
-        completedAt: "-"
-      };
-
-      // Save to Queue
-      const tickets = JSON.parse(localStorage.getItem("serviceTickets") || "[]");
-      tickets.unshift(newTicket);
-      localStorage.setItem("serviceTickets", JSON.stringify(tickets));
-
-      // Format English WhatsApp message
-      const waText = 
-`*NEW SERVICE REQUEST [${ticketId}]*
-👤 *From:* ${name}
-📂 *Category:* ${reqType}${techType}
-⚡ *Urgency:* ${urgency}
-📝 *Details & Location:* ${details}
-⏱️ *Submitted at:* ${timeNow}`;
-
-      // Clear details field & refresh queue
-      document.getElementById("requestDetails").value = "";
-      renderQueue();
-
-      // Redirect to WhatsApp
-      window.open(`https://wa.me/${TARGET_WHATSAPP}?text=${encodeURIComponent(waText)}`, "_blank");
-    });
-
-    // 5. Render Queue List for Staff & QM
-    function renderQueue() {
-      const tickets = JSON.parse(localStorage.getItem("serviceTickets") || "[]");
-      const filter = document.getElementById("statusFilter").value;
-      const list = document.getElementById("ticketList");
-      
-      document.getElementById("queueCount").innerText = tickets.filter(t => t.status !== "Completed").length;
-      list.innerHTML = "";
-
-      const filtered = tickets.filter(t => filter === "ALL" || t.status === filter);
-      if (filtered.length === 0) {
-        list.innerHTML = `<p class="text-sm text-gray-400 text-center py-6">No requests found in the queue.</p>`;
+      // Check if phone number is already registered
+      if (users.some(u => u.phone === phone)) {
+        showAlert("This WhatsApp number is already registered. Please Sign In.", true);
         return;
       }
 
-      filtered.forEach(t => {
-        const badgeColor = t.status === "Pending" ? "bg-red-100 text-red-700" 
-                         : t.status === "In Progress" ? "bg-amber-100 text-amber-800" 
-                         : "bg-emerald-100 text-emerald-800";
+      const newUser = { name, phone, role, password };
+      users.push(newUser);
+      localStorage.setItem("registeredUsers", JSON.stringify(users));
 
-        list.innerHTML += `
-          <div class="p-4 border rounded-lg bg-gray-50 flex flex-col sm:flex-row justify-between gap-3">
-            <div class="space-y-1">
-              <div class="flex items-center gap-2">
-                <span class="font-bold text-sm text-gray-900">${t.id}</span>
-                <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${badgeColor}">${t.status}</span>
-                <span class="text-xs font-medium text-gray-500">• Urgency: <b>${t.urgency}</b></span>
-              </div>
-              <p class="text-sm font-semibold text-emerald-900">${t.type}</p>
-              <p class="text-sm text-gray-700 bg-white p-2 rounded border">${t.details}</p>
-              <p class="text-xs text-gray-500">
-                👤 Requested by: <b>${t.name}</b> (<a href="https://wa.me/${t.phone}" target="_blank" class="text-emerald-700 underline">Chat</a>) 
-                | ⏱️ In: ${t.createdAt} ${t.completedAt !== "-" ? "| ✅ Out: " + t.completedAt : ""}
-                | 🔧 Handled by: <b>${t.handler}</b>
-              </p>
-            </div>
+      // Auto Sign-In after registration
+      localStorage.setItem("currentUser", JSON.stringify(newUser));
+      redirectByRole(newUser);
+    });
 
-            <!-- Staff Action Buttons -->
-            <div class="flex sm:flex-col justify-end gap-1.5 min-w-[135px]">
-              ${t.status === "Pending" ? `
-                <button onclick="updateStatus('${t.id}', 'In Progress')" class="text-xs bg-amber-500 hover:bg-amber-600 text-white py-1.5 px-3 rounded font-semibold">
-                  🔧 Claim Task
-                </button>` : ""}
-              ${t.status !== "Completed" ? `
-                <button onclick="updateStatus('${t.id}', 'Completed')" class="text-xs bg-emerald-700 hover:bg-emerald-800 text-white py-1.5 px-3 rounded font-semibold">
-                  ✅ Mark Completed
-                </button>` : ""}
-            </div>
-          </div>
-        `;
-      });
-    }
+    // Handle Sign In
+    document.getElementById("signInForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const phone = formatPhone(document.getElementById("loginPhone").value.trim());
+      const password = document.getElementById("loginPassword").value;
 
-    // 6. Staff Status Update Handler
-    function updateStatus(ticketId, newStatus) {
-      const tickets = JSON.parse(localStorage.getItem("serviceTickets") || "[]");
-      const idx = tickets.findIndex(t => t.id === ticketId);
-      if (idx === -1) return;
+      const users = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
+      const foundUser = users.find(u => u.phone === phone && u.password === password);
 
-      if (newStatus === "In Progress") {
-        const staffName = prompt("Enter your name (Assigned Staff):", localStorage.getItem("staffName") || "");
-        if (!staffName) return;
-        tickets[idx].handler = staffName;
-      } else if (newStatus === "Completed") {
-        tickets[idx].completedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        if (tickets[idx].handler === "Unassigned") {
-          tickets[idx].handler = localStorage.getItem("staffName") || "Onsite Staff";
-        }
+      if (!foundUser) {
+        showAlert("Invalid WhatsApp number or password. Please try again or Sign Up.", true);
+        return;
       }
 
-      tickets[idx].status = newStatus;
-      localStorage.setItem("serviceTickets", JSON.stringify(tickets));
-      renderQueue();
-    }
-
-    function clearSavedUser() {
-      localStorage.removeItem("staffName");
-      localStorage.removeItem("staffPhone");
-      document.getElementById("userName").value = "";
-      document.getElementById("userPhone").value = "";
-    }
-
-    function switchTab(tab) {
-      const isUser = (tab === 'user');
-      document.getElementById("userSection").classList.toggle("hidden", !isUser);
-      document.getElementById("queueSection").classList.toggle("hidden", isUser);
-      document.getElementById("tabUserBtn").className = isUser 
-        ? "w-1/2 py-2 text-sm font-semibold rounded-md bg-emerald-800 text-white transition"
-        : "w-1/2 py-2 text-sm font-semibold rounded-md text-gray-600 hover:bg-gray-50 transition";
-      document.getElementById("tabQueueBtn").className = !isUser 
-        ? "w-1/2 py-2 text-sm font-semibold rounded-md bg-emerald-800 text-white transition"
-        : "w-1/2 py-2 text-sm font-semibold rounded-md text-gray-600 hover:bg-gray-50 transition";
-      renderQueue();
-    }
+      // Save active session & redirect
+      localStorage.setItem("currentUser", JSON.stringify(foundUser));
+      redirectByRole(foundUser);
+    });
   </script>
 </body>
 </html>
