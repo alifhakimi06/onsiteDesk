@@ -140,7 +140,8 @@
       const details = document.getElementById("requestDetails").value.trim();
       const ticketId = "REQ-" + Math.floor(1000 + Math.random() * 9000);
       const now = new Date();
-      // Format as "Oct 14, 2026, 1:00 PM"
+      
+      // FORMAT MASA TANPA SAAT
       const timeString = now.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
 
       let imageUrl = ""; const fileInput = document.getElementById("ticketImage");
@@ -194,7 +195,13 @@
                   ${t.proofImageUrl ? `<a href="${t.proofImageUrl}" target="_blank" class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">✅ Proof</a>` : ""}
                 </div>
                 ${t.resolutionNote ? `<p class="text-[11px] text-emerald-800 mt-1.5 bg-emerald-50 p-1.5 rounded border border-emerald-100"><b>Tech Note:</b> ${t.resolutionNote}</p>` : ""}
-                <p class="text-[10px] text-gray-400 mt-1">Submitted: ${t.createdAt}</p>
+                
+                <!-- PAPARAN MASA DITAMBAH -->
+                <div class="text-[10px] text-gray-400 mt-2 flex flex-col gap-0.5">
+                  <span>Created: ${t.createdAt}</span>
+                  ${t.resolvedAt && t.resolvedAt !== "-" ? `<span>Resolved: ${t.resolvedAt}</span>` : ""}
+                </div>
+
               </div>
               <div class="flex flex-col items-end gap-1">
                 <span class="px-2.5 py-1 rounded-full font-semibold ${badge}">${t.status}</span>
