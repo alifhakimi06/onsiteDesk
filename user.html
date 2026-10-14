@@ -9,7 +9,6 @@
 <body class="bg-gray-100 text-gray-800 min-h-screen py-6 px-4">
 
   <div class="max-w-xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200">
-    
     <div class="flex justify-between items-center pb-4 mb-5 border-b border-gray-100">
       <div class="flex items-center space-x-2.5">
         <div class="w-9 h-9 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm" id="userInitial">S</div>
@@ -47,7 +46,6 @@
         </div>
       </div>
 
-      <!-- NEW: 3 Priorities with SLA Hours -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Service Level Agreement (SLA)</label>
         <div class="grid grid-cols-3 gap-2 text-xs sm:text-sm">
@@ -88,12 +86,8 @@
 
     async function dbFetch(path, options = {}) {
       for (const baseUrl of [activeDbUrl, ...DB_URLS]) {
-        try {
-          const res = await fetch(`${baseUrl}${path}`, options);
-          if (res.ok) { activeDbUrl = baseUrl; localStorage.setItem("firebaseActiveUrl", baseUrl); return await res.json(); }
-        } catch (e) {}
-      }
-      throw new Error("Database error.");
+        try { const res = await fetch(`${baseUrl}${path}`, options); if (res.ok) { activeDbUrl = baseUrl; localStorage.setItem("firebaseActiveUrl", baseUrl); return await res.json(); } } catch (e) {}
+      } throw new Error("Database error.");
     }
 
     let currentUser = null;
@@ -183,7 +177,14 @@
         if (myTickets.length === 0) return container.innerHTML = `<p class="text-xs text-gray-400">No requests submitted yet.</p>`;
 
         container.innerHTML = myTickets.map(t => {
-          const badge = t.status === "New" ? "bg-blue-100 text-blue-800" : t.status === "In progress" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800";
+          // 4 WARNA STATUS BERBEZA
+          const badge = t.status === "New" ? "bg-blue-100 text-blue-800" 
+                      : t.status === "In progress" ? "bg-amber-100 text-amber-800" 
+                      : t.status === "Resolved" ? "bg-purple-100 text-purple-800" // Tech dah siap
+                      : "bg-emerald-100 text-emerald-800"; // QM dah Complete
+          
+          const statusText = t.status === "Resolved" ? "Pending QM Verify" : t.status;
+
           return `
             <div class="p-3 bg-gray-50 border rounded-lg flex justify-between items-start text-xs">
               <div class="flex-1">
@@ -196,7 +197,7 @@
                 ${t.resolutionNote ? `<p class="text-[11px] text-emerald-800 mt-1.5 bg-emerald-50 p-1.5 rounded border border-emerald-100"><b>Tech Note:</b> ${t.resolutionNote}</p>` : ""}
                 <p class="text-[11px] text-gray-400 mt-1">Tech: <b>${t.assignedTo}</b></p>
               </div>
-              <span class="px-2.5 py-1 rounded-full font-semibold ${badge}">${t.status}</span>
+              <span class="px-2.5 py-1 rounded-full font-semibold ${badge}">${statusText}</span>
             </div>
           `;
         }).join("");
